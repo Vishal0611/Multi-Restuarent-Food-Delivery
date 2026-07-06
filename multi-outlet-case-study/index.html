@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Multi-Outlet Ordering in a Single Delivery: A Product Case Study</title>
+<meta name="description" content="A product-thinking exercise on multi-outlet ordering for Swiggy and Zomato: where the constraint isn't imagination, it's operational variance and unit economics. By Vishal V." />
+
+<!-- Open Graph -->
+<meta property="og:type" content="article" />
+<meta property="og:title" content="What if you could order from two restaurants in one delivery?" />
+<meta property="og:description" content="A PM case study on multi-outlet ordering for Swiggy & Zomato — operational variance, unit economics, and a phased path to a margin-positive feature." />
+<meta property="og:image" content="assets/og-cover.svg" />
+<meta name="twitter:card" content="summary_large_image" />
+
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Inter:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="assets/styles.css" />
+
+<style>
+/* ---- Personal note / hero dek ---- */
+.personal-note {
+  margin: 1.8rem auto 0;
+  max-width: 640px;
+  background: rgba(212, 86, 42, 0.06);
+  border-left: 3px solid var(--accent, #D4562A);
+  border-radius: 4px;
+  padding: 1rem 1.25rem;
+  font-family: var(--font-display, 'Fraunces', Georgia, serif);
+  font-size: 0.95rem;
+  color: var(--gray, #6B6560);
+  line-height: 1.7;
+}
+
+/* ---- "Why I picked this" section ---- */
+.why-section {
+  background: var(--cream-light, #FAF8F5);
+  border-top: 1px solid var(--rule, #E5E0DA);
+  border-bottom: 1px solid var(--rule, #E5E0DA);
+}
+.why-prose {
+  max-width: 580px !important;
+  font-size: 1.05rem;
+  line-height: 1.85;
+}
+.why-prose p {
+  margin-bottom: 1.1rem;
+}
+
+/* ---- Section opinion lines ---- */
+.section-opinion {
+  font-family: var(--font-display, 'Fraunces', Georgia, serif);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--ink-muted, #5A5450);
+  border-left: 2px solid var(--gold, #B8913A);
+  padding-left: 1rem;
+  margin: 1.4rem auto;
+  max-width: var(--measure, 68ch);
+}
+
+/* ---- PM Reflection / "What I got wrong" callout ---- */
+.pm-reflection {
+  background: #F5F0EB;
+  border: 1px solid #DDD8D2;
+  border-radius: 6px;
+  padding: 1.4rem 1.6rem;
+  max-width: var(--wide, 860px);
+  margin: 2.2rem auto;
+}
+.pm-reflection .lbl {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent, #D4562A);
+  margin-bottom: 0.5rem;
+}
+.pm-reflection h4 {
+  font-family: var(--font-display, 'Fraunces', Georgia, serif);
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0 0 0.7rem;
+  color: var(--ink, #1A1815);
+}
+.pm-reflection p {
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: var(--ink, #1A1815);
+  margin: 0;
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<!-- ======================= NAV ======================= -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#top" class="brand" aria-label="Multi-Outlet case study home">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="13" cy="16" r="8.5" fill="none" stroke="#1A1815" stroke-width="1.8"/>
+        <circle cx="20" cy="16" r="8.5" fill="none" stroke="#D4562A" stroke-width="1.8"/>
+      </svg>
+      <span class="name">Multi<span>/</span>Outlet</span>
+    </a>
+    <div class="nav-links" id="navLinks">
+      <a href="#problem">Problem</a>
+      <a href="#landscape">Landscape</a>
+      <a href="#ops">Ops Reality</a>
+      <a href="#prd">PRD</a>
+      <a href="#wireframes">Wireframes</a>
+      <a href="#metrics">Metrics</a>
+      <a href="#economics">Economics</a>
+      <a href="#rollout">Rollout</a>
+      <a href="#risks">Risks</a>
+      <a class="nav-cta" href="#tldr">Read TL;DR</a>
+    </div>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/></svg>
+    </button>
+  </div>
+</nav>
+
+<main id="top">
+
+<!-- ======================= HERO ======================= -->
+<header class="hero">
+  <div class="wrap-xwide hero-inner">
+    <div class="kicker">Product Case Study · July 2026</div>
+    <h1>What if you could order from <em>two restaurants</em> in one delivery?</h1>
+    <p class="sub">A product-thinking exercise on multi-outlet ordering for Swiggy and Zomato. The constraint isn't imagination, it's operational variance.</p>
+    <div class="hero-meta">
+      <div class="byline">By Vishal V
+        <span class="role">Aspiring Product Manager</span>
+      </div>
+      <span class="dot">·</span>
+      <span class="rt">~10 min read</span>
+      <span class="dot">·</span>
+      <span class="rt">India market</span>
+    </div>
+    <aside class="personal-note">
+      <p><em>Last month a friend and I split a Swiggy plan. He wanted biryani, I wanted sushi. Two orders, two delivery fees, twenty minutes apart, one arrived cold. That's what started this thought. I'm 22, I want to be a PM, and this is me teaching myself what the job actually feels like by working through a problem I use every week.</em></p>
+    </aside>
+  </div>
+  <div class="scroll-ind"><span>Scroll</span><span class="line"></span></div>
+</header>
+
+<!-- ======================= TL;DR ======================= -->
+<section class="block" id="tldr">
+  <div class="sec-head wide reveal">
+    <span class="sec-num">01 — Executive Summary</span>
+    <h2>The five things a reader should take away</h2>
+    <p class="lead">The short version, before the evidence.</p>
+    <p class="section-opinion">My bet is Swiggy ships this before Zomato, because Swiggy Bolt is already running 10-minute deliveries across 500+ cities and the multi-outlet infra reuses that same batching stack.</p>
+  </div>
+  <div class="tldr-grid">
+    <div class="tldr-card reveal">
+      <div class="idx">01</div>
+      <h3>The idea is proven (abroad, not here)</h3>
+      <p>DoorDash's DoubleDash, Uber Eats multi-store, Grubhub, and Deliveroo Bundles all ship multi-outlet ordering. Neither Swiggy nor Zomato does. Not for lack of imagination,, but because the operational and unit-economic constraints are genuinely hard.</p>
+    </div>
+    <div class="tldr-card reveal">
+      <div class="idx">02</div>
+      <h3>The constraint is variance, not vision</h3>
+      <p>Every extra pickup adds prep-time variance, rider idle time (~₹2/min), and cold-food probability. On India's ~53-minute average delivery clock, a second stop pushes orders toward the quality cliff. This is an operations problem wearing a product costume.</p>
+    </div>
+    <div class="tldr-card reveal">
+      <div class="idx">03</div>
+      <h3>DoubleDash's one non-obvious insight</h3>
+      <p>The second pickup sits near the <em>customer</em>, not near the first restaurant, adding ~5–6 minutes, not an extra 2&nbsp;km. Copy that constraint or the economics never close.</p>
+    </div>
+    <div class="tldr-card reveal">
+      <div class="idx">04</div>
+      <h3>Margin-positive only above ₹158</h3>
+      <p>The break-even model says the second cart must clear ~₹158 to cover rider wait, packaging, and refund risk. A ₹50 chai add-on loses money; a ₹175 dessert-and-drink bundle makes it.</p>
+    </div>
+    <div class="tldr-card reveal">
+      <div class="idx">05</div>
+      <h3>A ₹3.3B/year prize, if phased carefully</h3>
+      <p>At a 6% attach rate on ~3M eligible orders/day, incremental platform revenue is ~₹3.3B/year. The path there is a three-phase rollout that never repeats Zomato's Intercity Legends failure mode.</p>
+    </div>
+    <div class="tldr-card reveal" style="background:var(--ink);color:var(--cream);border-color:var(--ink);">
+      <div class="idx" style="color:var(--accent);">→</div>
+      <h3 style="color:#fff;">The thesis in one line</h3>
+      <p style="color:#D8D2C7;">Multi-outlet ordering is viable and margin-positive for Swiggy/Zomato, but only under a narrow set of constraints that global platforms discovered the hard way, and only if it never compromises the primary order's ETA.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= WHY I PICKED THIS ======================= -->
+<section class="block why-section" id="why">
+  <div class="sec-head reveal">
+    <span class="sec-num">01b — Why I Picked This Problem</span>
+    <h2>Why I picked this problem</h2>
+  </div>
+  <div class="prose why-prose reveal">
+    <p>I want to become a Product Manager, soon. Case studies like this are how I'm teaching myself: pick a problem from real life, reason through it end to end.</p>
+    <p>Multi-outlet ordering is right because everyone in Bangalore has an opinion on Swiggy and Zomato, but almost nobody has thought through the operational cost of a feature that sounds obvious. That gap — between "sounds obvious" and "actually hard" — is where product management lives. I don't know if all my thinking here is right. But this is me trying, in public.</p>
+  </div>
+</section>
+
+<!-- ======================= PROBLEM ======================= -->
+<section class="block" id="problem">
+  <div class="sec-head reveal">
+    <span class="sec-num">02 — The Problem</span>
+    <h2>Why anyone would want this</h2>
+    <p class="lead">The demand is quietly obvious. The reason it hasn't shipped is not.</p>
+  </div>
+  <div class="prose reveal">
+    <p class="big">Urban Indian households don't eat as one palate. On any given night, a family wants biryani from one kitchen and ice-cream from another; an office group wants variety no single menu can deliver.</p>
+    <p>Today those wants become two separate orders: two delivery fees, two riders, two ETAs, two chances for something to go wrong. UX research surfaces four drivers: <strong>different dietary preferences</strong>, <strong>main from one place and dessert or a drink from another</strong>, <strong>group and office orders</strong>, and <strong>price optimisation</strong> (<a class="cite" href="https://medium.com/@sowmya.iyer25/food-delivery-multiple-restaurants-in-a-single-order-116fb74dec5a" target="_blank" rel="noopener">Sowmya T A, Medium, 2024</a>). Urban millennials and Gen Z now order <strong>3–4 nights a week</strong> — the mixed-preference household is the median customer, not the exception.</p>
+
+    <h3>The market this sits inside</h3>
+    <p>India's food delivery is a stable duopoly: <strong>Zomato at 56.8%, Swiggy at 43.2%</strong>, processing <strong>4.3–4.5 million orders a day</strong> (<a class="cite" href="https://reports.datumintell.in/reports/Datum-charts/food-delivery-market-v2.html" target="_blank" rel="noopener">Datum Intelligence</a>, <a class="cite" href="https://www.thehindubusinessline.com/companies/swiggy-zomato-converge-on-platform-fees-as-unit-economics-take-centre-stage/article70780243.ece" target="_blank" rel="noopener">Hindu BusinessLine, March 2026</a>). AOV is <strong>₹425–₹436</strong> post-discount (<a class="cite" href="https://goodluckcapital.com/zomato-fy25-investor-research-report/" target="_blank" rel="noopener">GoodLuck Capital, Zomato FY25</a>), but Zomato's contribution margin was just <strong>8.6% of GOV in Q4&nbsp;FY25</strong> — roughly ₹35 per order (<a class="cite" href="https://img.etimg.com/photo/120812923.cms" target="_blank" rel="noopener">ICICI Securities</a>). Any new feature has to earn its way into that ₹35.</p>
+  </div>
+
+  <div class="stat-box reveal">
+    <div class="lbl">India food delivery · at a glance</div>
+    <div class="stat-grid">
+      <div class="stat"><div class="n">4.3–4.5<span>M</span></div><div class="d">Food-delivery orders per day (combined)</div></div>
+      <div class="stat"><div class="n">₹425<span>–436</span></div><div class="d">Average order value, post-discount</div></div>
+      <div class="stat"><div class="n">8.6<span>%</span></div><div class="d">Zomato contribution margin (Q4 FY25)</div></div>
+      <div class="stat"><div class="n">57<span>/43</span></div><div class="d">Zomato / Swiggy market share split</div></div>
+      <div class="stat"><div class="n">₹35<span>/ord</span></div><div class="d">Contribution margin per order</div></div>
+      <div class="stat"><div class="n">₹17.6<span>0</span></div><div class="d">Platform fee, both players (March 2026)</div></div>
+    </div>
+  </div>
+
+  <div class="insight reveal">
+    <div class="lbl">PM Insight</div>
+    <blockquote>The demand signal is real. The reason it hasn't shipped isn't a product gap. It's that <em>the margin can't absorb a mistake.</em></blockquote>
+    <p class="section-opinion">In my view, whoever ships this first uses it as a Swiggy One / Zomato Gold retention hook, because at 6% attach on 3M eligible orders/day the ₹3.3B/year opportunity only materialises if the feature is gated behind subscription rather than handed to everyone for free.</p>
+  </div>
+</section>
+
+<!-- ======================= COMPETITIVE ======================= -->
+<section class="block" id="landscape">
+  <div class="sec-head wide reveal">
+    <span class="sec-num">03 — Competitive Landscape</span>
+    <h2>How everyone else solved it (and how Zomato failed)</h2>
+    <p class="lead">Multi-outlet ordering is a solved problem in the US and UK. The design choices that made it work are specific and non-obvious.</p>
+  </div>
+
+  <div class="prose reveal">
+    <h3>DoorDash DoubleDash: the gold standard</h3>
+    <p>Launched August 2021, DoubleDash adds a second nearby store to an order delivered by the same Dasher. Across 134,251 enrolled merchants: <strong>55%+ of DoubleDash customers order from a business they've never bought from before</strong>, and <strong>40%+ of orders come from customers new to the add-on business</strong> (<a class="cite" href="https://merchants.doordash.com/en-us/doubledash" target="_blank" rel="noopener">DoorDash Merchant site</a>, <a class="cite" href="https://help.doordash.com/en-us/merchants/article/doubledash-faqs" target="_blank" rel="noopener">Merchant FAQ</a>). It adds only <strong>5–6 minutes</strong> on average, with no significant quality impact.</p>
+  </div>
+
+  <p class="section-opinion">I'd bet against replicating Deliveroo's three-store Bundles in India, because each additional pickup already adds 5–6 minutes of ETA in DoubleDash's own data, and three stops would push the median order well past 65 minutes — beyond what the 53-minute national average leaves any room for.</p>
+
+  <div class="callout reveal">
+    <div class="lbl">The architectural insight everyone misses</div>
+    <p>DoubleDash's second pickup is restricted to a tight radius near the <strong>delivery destination</strong>, not near the first restaurant. The rider travels Restaurant&nbsp;→&nbsp;customer's neighbourhood&nbsp;→&nbsp;second store (next door to the customer)&nbsp;→&nbsp;customer. The extra distance is a block or two, not an extra 2&nbsp;km. <em>This single constraint is what makes the economics work.</em></p>
+  </div>
+
+  <div class="prose reveal">
+    <p><strong>Uber Eats</strong> shipped "Bundle another store" in October 2023, nationwide in the US, adding convenience and liquor stores as second-store options by June 2026 (<a class="cite" href="https://www.uber.com/us/en/newsroom/multi-store-ordering/" target="_blank" rel="noopener">Uber Eats Newsroom</a>). <strong>Grubhub</strong> was last to market in June 2025, differentiating on alcohol and flowers ("sushi and a six-pack", "chips and chardonnay") (<a class="cite" href="https://about.grubhub.com/news/multi-store-ordering-is-here-customer-favorites-delivered-together/" target="_blank" rel="noopener">Grubhub Newsroom</a>). <strong>Deliveroo Bundles</strong> is the most generous, allowing up to <strong>three stores</strong> in one basket, grocery-led in the UK (<a class="cite" href="https://deliveroo.co.uk/more/news-articles/deliveroo-major-product-updates" target="_blank" rel="noopener">Deliveroo product updates</a>).</p>
+  </div>
+
+  <div class="tbl-wrap reveal">
+    <table class="data">
+      <caption>Global multi-outlet features: what worked, what failed</caption>
+      <thead>
+        <tr><th>Feature</th><th>Platform</th><th>Status</th><th>Decisive factor</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>DoubleDash</td><td>DoorDash</td><td class="pos">Live &amp; growing</td><td>2nd stop near delivery point; 55% new-customer discovery</td></tr>
+        <tr><td>Multi-Store Ordering</td><td>Uber Eats</td><td class="pos">Live (Oct 2023)</td><td>"Bundle another store" CTA in cart; nationwide</td></tr>
+        <tr><td>Multi-Store Ordering</td><td>Grubhub</td><td class="pos">Live (Jun 2025)</td><td>Late-mover; alcohol &amp; flowers as differentiators</td></tr>
+        <tr><td>Bundles</td><td>Deliveroo</td><td class="pos">Live (UK)</td><td>Up to 3 stores; grocery-led</td></tr>
+        <tr><td>Intercity Legends</td><td>Zomato</td><td class="hl">Shut May 2024</td><td>No PMF; ₹5,000 min order, cold food, low repeat</td></tr>
+        <tr><td>Cross-restaurant cart</td><td>Swiggy / Zomato</td><td class="hl">Never launched</td><td>Prep sync, rider wait, quality-degradation risk</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warn reveal">
+    <div class="lbl">Cautionary tale: Zomato Intercity Legends</div>
+    <p>Launched August 2022 to deliver iconic dishes across cities (Kolkata rosogolla to Delhi), Zomato shut it in May 2024. CEO Deepinder Goyal: <em>"After two years of trying, not finding product-market fit, we have decided to shut down the service with immediate effect"</em> (<a class="cite" href="https://www.restaurantindia.in/news/zomato-discontinues-intercity-food-delivery-service-legends-after-two-years.n11600" target="_blank" rel="noopener">Restaurant India</a>). A ₹5,000 minimum order, a pre-stocked model, cold-food quality and logistics complexity killed it. The lesson is not "don't try cross-outlet". The lesson is: <strong>don't launch the hardest version first.</strong></p>
+  </div>
+</section>
+
+<!-- ======================= OPS REALITY ======================= -->
+<section class="block" id="ops">
+  <div class="sec-head wide reveal">
+    <span class="sec-num">04 — The Operational Reality</span>
+    <h2>Why this is genuinely hard</h2>
+    <p class="lead">Four constraints compound. Each is survivable alone; together they define the design space.</p>
+  </div>
+
+  <div class="prose reveal">
+    <h3>1 · Prep-time variance is the core coordination problem</h3>
+    <p>Synchronising two kitchens is the fundamental blocker. KPT swings by 13+ minutes at a single restaurant type — one chain cut prep from <strong>25 minutes to 12</strong> through process changes alone (<a class="cite" href="https://www.restaurantindia.in/article/why-kitchen-preparation-time-plays-a-significant-role-in-food-delivery-biz.14171" target="_blank" rel="noopener">Restaurant India</a>). It varies with order complexity, time of day, and kitchen load — hard to predict without ML (<a class="cite" href="https://www.cse.iitd.ac.in/~cs5180411/Prediction%20of%20Kitchen%20Preparation%20Time%20in%20Food%20Delivery.pdf" target="_blank" rel="noopener">IIT Delhi, KPT prediction</a>).</p>
+  </div>
+
+  <div class="tbl-wrap reveal">
+    <table class="data">
+      <caption>Typical kitchen prep-time by category (industry benchmarks)</caption>
+      <thead><tr><th>Category</th><th class="num">Prep time</th><th>Multi-outlet suitability</th></tr></thead>
+      <tbody>
+        <tr><td>QSR (McDonald's, KFC)</td><td class="num">3–7 min</td><td class="pos">Ideal — predictable, fast</td></tr>
+        <tr><td>Fast-casual biryani</td><td class="num">8–15 min</td><td>Workable with ML sync</td></tr>
+        <tr><td>Pizza</td><td class="num">12–18 min</td><td>Marginal</td></tr>
+        <tr><td>Indian restaurant (curry)</td><td class="num">15–25+ min</td><td class="hl">High variance — avoid as pair</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose reveal">
+    <h3>2 · Rider wait time is an unpriced cost</h3>
+    <p>Base pay runs <strong>₹20–₹35 per order</strong> — roughly <strong>₹1.67–₹2.08 per minute</strong> of rider time (<a class="cite" href="https://www.bitrue.com/blog/zomato-vs-swiggy-delivery-platform" target="_blank" rel="noopener">delivery pay analysis, 2026</a>). Deliveroo's data shows stacking two orders from one restaurant <strong>cut hourly earnings from £15.70 to £14.55</strong> (<a class="cite" href="https://www.thegrocer.co.uk/news/cold-food-and-poor-pay-order-stacking-booming-among-food-delivery-apps/693908.article" target="_blank" rel="noopener">The Grocer, July 2024</a>). An 8-minute second-pickup wait adds ~₹16 per bundled order — worthwhile only if incremental revenue clears it.</p>
+
+    <h3>3 · Cold food is the quality cliff</h3>
+    <p>Average clear-weather delivery is already <strong>≈53 minutes</strong>, with traffic adding 10–20 minutes (<a class="cite" href="https://powerdrill.ai/blog/why-your-food-always-comes-later-analysis" target="_blank" rel="noopener">delivery-time analysis</a>). Add DoubleDash's 5–8 minute second-pickup penalty and a hot order breaches 60 minutes. The fix is structural: make the second store <strong>ambient/cold-safe</strong> (dessert, drinks, snacks) and keep it near the customer.</p>
+
+    <h3>4 · The ETA model gains a fifth stage</h3>
+    <p>Swiggy tracks four ETA stages — <strong>O2A, FM, WT, LM</strong> — and obsesses over "inaccurate bumps", the upward ETA jumps that erode trust (<a class="cite" href="https://www.markhub24.com/post/when-every-minute-is-a-brand-promise-swiggy-s-delivery-time-prediction-algorithm" target="_blank" rel="noopener">Swiggy ETA algorithm analysis</a>). A second restaurant adds a fifth stage — a second WT event — making prediction harder. A bump at the second store destroys trust in the whole feature.</p>
+  </div>
+
+  <div class="eta-strip reveal">
+    <div class="eta-stage"><div class="code">O2A</div><div class="nm">Order → Assignment</div><div class="dsc">Time to match a rider</div></div>
+    <div class="eta-stage"><div class="code">FM</div><div class="nm">First Mile</div><div class="dsc">Rider travels to restaurant</div></div>
+    <div class="eta-stage"><div class="code">WT₁</div><div class="nm">Wait Time</div><div class="dsc">Idle at restaurant 1</div></div>
+    <div class="eta-stage new"><span class="tag">New</span><div class="code">WT₂</div><div class="nm">Second Pickup</div><div class="dsc">Ambient store near customer</div></div>
+    <div class="eta-stage"><div class="code">LM</div><div class="nm">Last Mile</div><div class="dsc">Delivery to door</div></div>
+  </div>
+
+  <div class="prose reveal">
+    <h3>And the ground is shifting under riders</h3>
+    <p>The <strong>Code on Social Security, 2020</strong> requires platforms to contribute <strong>1–2% of annual turnover</strong> to a gig-worker Social Security Fund (<a class="cite" href="https://www.pib.gov.in/PressReleasePage.aspx?PRID=2200767&reg=3&lang=1" target="_blank" rel="noopener">PIB, December 2025</a>), and in <strong>January 2026</strong> the government secured agreement to <strong>remove mandatory 10-minute delivery deadlines</strong> (<a class="cite" href="https://www.bbc.co.uk/news/articles/cy8pkvl78pmo" target="_blank" rel="noopener">BBC, January 2026</a>). Any feature that adds rider idle time without a visible bonus invites a "manufactured idle time" narrative — so multi-outlet compensation must include a multi-stop bonus, not just a longer wait.</p>
+  </div>
+
+  <div class="pm-reflection reveal">
+    <div class="lbl">In hindsight</div>
+    <h4>What I got wrong at first</h4>
+    <p>When I first sketched this out, I assumed the hard part was convincing riders. Pay a small multi-stop bonus, done. A few hours into reading about Swiggy's four-stage ETA model, I realised the rider is the easy part. The hard part is that Swiggy treats ETA accuracy as a brand promise. Bolting a fifth stage onto their pipeline isn't a feature request, it's a philosophy change. I underestimated that.</p>
+  </div>
+
+  <div class="insight reveal">
+    <div class="lbl">PM Insight</div>
+    <p class="section-opinion">The rider bonus design is the part I'm least confident about — base pay is already only ₹20–₹35 per order (roughly ₹2/min of rider time), so an 8-minute idle at a second pickup adds ~₹16 of cost the platform must cover before the bundled order clears any margin at all. Get the bonus structure wrong and you have a strike risk inside the most visible new feature on the roadmap.</p>
+    <blockquote>Swiggy Bolt proves Indians <em>will</em> pay for speed. Multi-outlet is the opposite bet. So it can never be the default. It has to be a separate, opt-in lane with an honest, longer ETA.</blockquote>
+  </div>
+</section>
+
+<!-- ======================= PRD ======================= -->
+<section class="block" id="prd">
+  <div class="sec-head wide reveal">
+    <span class="sec-num">05 — The Product Solution</span>
+    <h2>PRD highlights</h2>
+    <p class="lead">A crisp spec for the lowest-risk version: <em>Add-from-Nearby</em>, a post-checkout second-store nudge for member accounts.</p>
+  </div>
+
+  <div class="prose reveal">
+    <h3>Problem statement</h3>
+    <p>Households with mixed preferences place separate orders to combine a main with a dessert or drink from another restaurant, paying two delivery fees and juggling two ETAs. The platform captures none of the incremental AOV and misses a proven discovery channel — while the operational risk of naïve multi-restaurant fulfilment (rider wait, cold food, ETA bumps) has kept the feature off the roadmap.</p>
+
+    <h3>Goals</h3>
+    <ul>
+      <li><strong>Attach rate:</strong> reach a 5% bundled-order attach rate on eligible orders within two quarters of GA.</li>
+      <li><strong>AOV lift:</strong> deliver a +₹150–₹200 average uplift on bundled orders (second cart clears the ₹158 break-even).</li>
+      <li><strong>Protect the core:</strong> keep primary-order ETA delta ≤ +6 minutes at P75 and hold cold-food complaint delta under +1.5pp vs control.</li>
+      <li><strong>Discovery:</strong> generate incremental new-customer touches for second-store partners (DoubleDash sees 55% new-customer share).</li>
+      <li><strong>Rider neutrality:</strong> keep rider satisfaction flat or better via a multi-stop bonus.</li>
+    </ul>
+
+    <p class="section-opinion">I think the non-goals matter more than the goals, because the ₹158 AOV-uplift break-even means any feature that dilutes attach rate — like showing the second cart before the primary is confirmed — kills the economics before the launch reaches Phase 2.</p>
+    <h3>Non-goals</h3>
+    <ul>
+      <li><strong>Not</strong> true main-plus-main multi-restaurant ordering at launch. That is Phase 3.</li>
+      <li><strong>Not</strong> available on Bolt / express or sub-25-minute ETA orders.</li>
+      <li><strong>Not</strong> a default experience. Strictly opt-in, member-gated at launch.</li>
+      <li><strong>Not</strong> a third store. Hard cap at two (per DoubleDash, Uber Eats, Grubhub).</li>
+      <li><strong>Not</strong> any additional delivery fee. A per-order fee kills adoption in a price-sensitive market.</li>
+    </ul>
+  </div>
+
+  <h3 style="max-width:var(--wide);margin:2.6rem auto 1.4rem;font-family:var(--font-display);font-weight:500;font-size:1.5rem;" class="reveal">Target personas</h3>
+  <div class="persona-grid">
+    <div class="persona reveal">
+      <div class="avatar" style="background:var(--accent);">P</div>
+      <h4>Family-Ordering Priya</h4>
+      <div class="meta">38 · Powai, Mumbai · Swiggy One</div>
+      <p>Orders dinner 3× a week for a family of four with different tastes. Kids want pizza,, she wants a salad, her mother wants dessert. Ends up placing two orders or forcing a compromise.</p>
+      <div class="jtbd-l">Job to be done</div>
+      <p class="jtbd">"Feed everyone what they actually want, in one delivery, without paying twice."</p>
+    </div>
+    <div class="persona reveal">
+      <div class="avatar" style="background:var(--accent-2);">R</div>
+      <h4>Solo-Foodie Rohan</h4>
+      <div class="meta">27 · Koramangala, Bengaluru · Gold</div>
+      <p>Orders a biryani but always wishes he'd added a filter coffee or an ice-cream, from a different, better outlet than the restaurant's own menu offers.</p>
+      <div class="jtbd-l">Job to be done</div>
+      <p class="jtbd">"Round out my meal with the best dessert nearby, without a second delivery fee."</p>
+    </div>
+    <div class="persona reveal">
+      <div class="avatar" style="background:var(--gold);">A</div>
+      <h4>Group-Order Ananya</h4>
+      <div class="meta">31 · HSR Layout, Bengaluru · Swiggy One BLCK</div>
+      <p>Coordinates Friday office lunch for eight. Everyone wants something different; splitting across two orders means mismatched arrival times and awkward fee-splitting.</p>
+      <div class="jtbd-l">Job to be done</div>
+      <p class="jtbd">"Give the team variety from two kitchens, delivered together, on one bill."</p>
+    </div>
+  </div>
+
+  <h3 style="max-width:var(--measure);margin:2.6rem auto 1.4rem;font-family:var(--font-display);font-weight:500;font-size:1.5rem;" class="reveal">User stories</h3>
+  <div class="stories">
+    <div class="story reveal"><span class="us-id">US-1</span><p>As a <b>member with a confirmed order &gt;25 min ETA</b>, I want to see nearby dessert and beverage stores post-checkout so that I can add a treat without starting a new order.</p></div>
+    <div class="story reveal"><span class="us-id">US-2</span><p>As a <b>price-sensitive customer</b>, I want the second store to carry <b>no extra delivery fee</b> so that adding it feels free.</p></div>
+    <div class="story reveal"><span class="us-id">US-3</span><p>As a <b>customer who values reliability</b>, I want the longer combined ETA shown explicitly <b>before</b> I confirm so that I'm never surprised by a bump.</p></div>
+    <div class="story reveal"><span class="us-id">US-4</span><p>As <b>Family-Ordering Priya</b>, I want to pick two restaurants from a curated "variety order" flow so that everyone at the table gets what they want in one delivery.</p></div>
+    <div class="story reveal"><span class="us-id">US-5</span><p>As a <b>delivery partner</b>, I want a visible multi-stop bonus and a route that keeps the second pickup near the drop so that a bundled order earns me more, not less.</p></div>
+    <div class="story reveal"><span class="us-id">US-6</span><p>As a <b>restaurant partner</b>, I want to be paired only with non-competing outlets so that the feature grows my orders instead of cannibalising them.</p></div>
+    <div class="story reveal"><span class="us-id">US-7</span><p>As an <b>ops analyst</b>, I want a real-time guardrail monitoring panel so that I can pause the feature in a city if cold-food complaints spike.</p></div>
+  </div>
+
+  <div class="tbl-wrap reveal">
+    <table class="data">
+      <caption>Requirements: P0 / P1 / P2 with acceptance criteria</caption>
+      <thead><tr><th>Pri</th><th>Requirement</th><th>Acceptance criteria (Given / When / Then)</th></tr></thead>
+      <tbody>
+        <tr><td class="hl">P0</td><td>Eligibility engine</td><td>Given a confirmed order, when primary ETA &gt;25 min and a cold-safe store exists ≤800 m of the drop, then surface the nudge; otherwise suppress it.</td></tr>
+        <tr><td class="hl">P0</td><td>No extra delivery fee</td><td>Given a second cart is added, when the customer reviews the bill, then no additional delivery fee appears and "No extra delivery fee" is shown.</td></tr>
+        <tr><td class="hl">P0</td><td>Explicit combined ETA</td><td>Given a second store is added, when the customer confirms, then the revised (longer) ETA is displayed before payment, not after.</td></tr>
+        <tr><td class="hl">P0</td><td>Ambient-only catalogue</td><td>Given the second-store list, when it renders, then only ambient/cold-safe categories (dessert, beverage, snack) are eligible.</td></tr>
+        <tr><td>P1</td><td>Rider multi-stop bonus</td><td>Given a bundled order, when the rider completes both pickups, then a multi-stop bonus is added to the payout and shown in-app.</td></tr>
+        <tr><td>P1</td><td>Ops guardrail alert panel</td><td>Given live bundled orders, when cold-food complaint delta &gt;1.5pp in a city, then trigger an alert and one-tap city pause.</td></tr>
+        <tr><td>P1</td><td>Non-competing pairing rules</td><td>Given a primary restaurant, when the second-store list is built, then exclude outlets in the same primary cuisine category.</td></tr>
+        <tr><td>P2</td><td>In-cart upsell variant</td><td>Given a cart in progress, when value &gt;₹300, then optionally show a "Complete your meal" in-cart strip (A/B against post-checkout).</td></tr>
+        <tr><td>P2</td><td>Variety-order family flow</td><td>Given a member on the home screen, when they choose "Order for the family", then allow two-restaurant mix &amp; match with an explicit longer ETA.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ======================= WIREFRAMES ======================= -->
+<section class="block" id="wireframes">
+  <div class="sec-head wide reveal">
+    <span class="sec-num">06 — UX Wireframes</span>
+    <h2>Three patterns, three risk levels</h2>
+    <p class="lead">Ordered from lowest operational risk to highest reward. Each mockup uses generic styling. The point is the interaction pattern, not a UI clone.</p>
+  </div>
+
+  <!-- Pattern A -->
+  <p class="section-opinion">Pattern B may outperform on AOV, since the in-cart upsell catches the customer before they've mentally closed the order. Pattern A ships first because it adds zero friction to the primary checkout flow — and protecting the ETA delta is the harder constraint.</p>
+
+  <div class="wf-block reveal">
+    <div class="wf-row">
+      <div class="wf-phone-col">
+        <div class="phone"><div class="phone-screen">
+          <div class="phone-notch"></div>
+          <div class="phone-status"><span>9:41</span><span class="dots">▪ ▪ ▪ ⏻</span></div>
+          <div class="phone-body">
+            <div class="p-scroll">
+              <div class="p-confirm">
+                <div class="tick">✓</div>
+                <div class="h">Order confirmed · Behrouz Biryani</div>
+                <div class="eta">Arriving in ~38 min</div>
+              </div>
+              <div class="p-card p-nudge">
+                <div class="nh">✨ Add something sweet?</div>
+                <div class="p-store">
+                  <div class="ico" style="background:#FDE7D6;">🍨</div>
+                  <div class="info"><div class="sn">Baskin Robbins</div><div class="sd">0.4 km · Delivered together</div></div>
+                  <div class="add">Add</div>
+                </div>
+                <div class="p-store">
+                  <div class="ico" style="background:#E7F0EC;">🍦</div>
+                  <div class="info"><div class="sn">Naturals Ice Cream</div><div class="sd">0.6 km · Delivered together</div></div>
+                  <div class="add">Add</div>
+                </div>
+                <div style="text-align:center;font-size:.62rem;font-weight:700;color:var(--accent-2);margin-top:.5rem;">✓ No extra delivery fee</div>
+              </div>
+              <div class="p-cta">Skip · Track your order</div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+      <div class="wf-notes">
+        <div class="patt">Pattern A · Lowest risk</div>
+        <h3>Post-checkout "Add a Dessert" nudge</h3>
+        <p>The primary order is committed, so the second store is pure incremental upside. Surfaced at the confirmation screen with dessert stores that pair naturally with the meal.</p>
+        <ul class="why">
+          <li><b>Only fires when ETA &gt;25 min</b>: enough slack to coordinate a second pickup without pushing past the cold-food cliff.</li>
+          <li><b>Ambient items only</b> (ice-cream, desserts): these don't degrade, neutralising the top quality risk.</li>
+          <li><b>800 m radius from the drop, not the restaurant</b>: the DoubleDash insight that keeps rider extra-distance to a block or two.</li>
+          <li><b>"No extra delivery fee" is the loudest label</b>: it's the single biggest adoption driver in a price-sensitive market.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pattern B -->
+  <div class="wf-block reveal">
+    <div class="wf-row rev">
+      <div class="wf-notes">
+        <div class="patt">Pattern B · Medium risk</div>
+        <h3>In-cart "Complete Your Meal" upsell</h3>
+        <p>A persistent strip at the cart bottom, before checkout. Higher bundle intent, but adds friction to the core flow — ships as an A/B variant against Pattern&nbsp;A.</p>
+        <ul class="why">
+          <li><b>Triggers above a ₹300 basket</b>: bundling only makes sense once the order clears the profitability floor.</li>
+          <li><b>Curated chips, not a full catalogue</b>: chai, coffee, dessert from 2–3 nearby ambient outlets keeps the decision fast.</li>
+          <li><b>Single combined checkout</b>: one payment, one bill, one delivery; the friction is one tap, not a second order.</li>
+          <li><b>"Delivered with your order"</b> sets the expectation of a single rider, single ETA.</li>
+        </ul>
+      </div>
+      <div class="wf-phone-col">
+        <div class="phone"><div class="phone-screen">
+          <div class="phone-notch"></div>
+          <div class="phone-status"><span>9:41</span><span class="dots">▪ ▪ ▪ ⏻</span></div>
+          <div class="phone-body">
+            <div class="p-appbar"><span class="back">←</span><span class="title">Your cart<small>Truffles · Fast casual</small></span></div>
+            <div class="p-scroll">
+              <div class="p-card">
+                <div class="p-item"><span>1× All-American Cheeseburger</span><span>₹289</span></div>
+                <div class="p-item"><span>1× Peri Peri Fries</span><span>₹129</span></div>
+                <div class="p-line total"><span>Item total</span><span>₹418</span></div>
+              </div>
+              <div class="p-divider">Complete your meal</div>
+              <div class="p-chip-row">
+                <span class="p-chip on">Chaayos</span>
+                <span class="p-chip">Starbucks</span>
+                <span class="p-chip">Blinkit</span>
+              </div>
+              <div class="p-card p-nudge" style="padding:.6rem .7rem;">
+                <div class="p-store" style="border:none;background:transparent;margin:0;">
+                  <div class="ico" style="background:#FDE7D6;">🍵</div>
+                  <div class="info"><div class="sn">Kulhad Chai ×1</div><div class="sd">₹69 · Delivered with your order</div></div>
+                  <div class="add">Add</div>
+                </div>
+                <div style="text-align:center;font-size:.6rem;font-weight:700;color:var(--accent-2);">✓ No extra delivery fee</div>
+              </div>
+              <div class="p-cta">Proceed to pay · ₹418</div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pattern C -->
+  <div class="wf-block reveal">
+    <div class="wf-row">
+      <div class="wf-phone-col">
+        <div class="phone"><div class="phone-screen">
+          <div class="phone-notch"></div>
+          <div class="phone-status"><span>9:41</span><span class="dots">▪ ▪ ▪ ⏻</span></div>
+          <div class="phone-body">
+            <div class="p-appbar"><span class="back">←</span><span class="title">Variety Order<small>Members only</small></span></div>
+            <div class="p-scroll">
+              <div class="p-hero-img"><span class="fam">👨‍👩‍👧</span></div>
+              <div style="font-weight:700;font-size:.82rem;color:#1A1815;">Order for the whole family</div>
+              <div style="font-size:.7rem;color:#888;margin:.2rem 0 .8rem;">Mix &amp; match from 2 restaurants, delivered together.</div>
+              <div class="p-restaurant-pick">
+                <div class="rp">🍕<br>Pick restaurant 1</div>
+                <div class="p-plus">+</div>
+                <div class="rp">🍜<br>Pick restaurant 2</div>
+              </div>
+              <div class="p-card" style="margin-top:.8rem;">
+                <div class="p-line"><span>Both delivered together</span><span style="font-weight:700;">~45 min</span></div>
+                <div class="p-line"><span>Delivery fee</span><span style="color:var(--accent-2);font-weight:700;">₹0 · One member</span></div>
+              </div>
+              <div class="p-chip-row"><span class="p-chip on">HSR Layout · high density</span></div>
+              <div class="p-cta">Start variety order</div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+      <div class="wf-notes">
+        <div class="patt">Pattern C · Highest reward</div>
+        <h3>"Variety Order" family flow</h3>
+        <p>The true main-plus-main experience: highest AOV lift, highest operational risk. Member-exclusive, honest longer ETA upfront, restricted to high-density neighbourhoods where two restaurants sit within a kilometre.</p>
+        <ul class="why">
+          <li><b>Member-gated (Swiggy One / Gold)</b>: creates a subscription hook and a more forgiving early-adopter cohort for the inevitable bugs.</li>
+          <li><b>Explicit "~45 min" ETA</b>: transparency prevents the trust-destroying bump. Consumers accept longer waits when they're predictable.</li>
+          <li><b>Geo-fenced to dense areas</b> (HSR, Powai, Koramangala): only launched where prep-sync and short second-hops are actually feasible.</li>
+          <li><b>Works first for cloud-kitchen clusters</b>: co-located brands mean a single pickup point and near-zero extra routing.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= METRICS ======================= -->
+<section class="block" id="metrics">
+  <div class="sec-head wide reveal">
+    <span class="sec-num">07 — Metrics Framework</span>
+    <h2>One North Star, guarded on every side</h2>
+    <p class="lead">Input metrics move the North Star; output metrics prove business value; guardrails ensure we never win attach at the cost of the core experience.</p>
+  </div>
+
+  <div class="tree reveal">
+    <div class="nsm">
+      <div class="lbl">North Star Metric</div>
+      <div class="m">Bundled-Order Attach Rate on eligible orders</div>
+    </div>
+    <div class="tree-cols">
+      <div class="tree-col input">
+        <h4>Input metrics</h4>
+        <ul>
+          <li><b>Nudge impressions</b><span>Eligible orders that saw the second-store surface</span></li>
+          <li><b>Tap-through rate</b><span>Impressions → second-store opened</span></li>
+          <li><b>Second-cart completion</b><span>Opened → second cart confirmed</span></li>
+        </ul>
+      </div>
+      <div class="tree-col output">
+        <h4>Output metrics</h4>
+        <ul>
+          <li><b>AOV lift</b><span>+₹150–₹200 target on bundled orders</span></li>
+          <li><b>Incremental contribution margin</b><span>₹ / bundled order after all costs</span></li>
+          <li><b>New-customer discovery</b><span>First-time buyers at second store</span></li>
+        </ul>
+      </div>
+      <div class="tree-col guard">
+        <h4>Guardrail metrics</h4>
+        <ul>
+          <li><b>Primary-order ETA delta</b><span>≤ +6 min at P75 vs control</span></li>
+          <li><b>Cold-food complaint rate</b><span>&lt; +1.5pp vs control</span></li>
+          <li><b>Rider satisfaction &amp; partner NPS</b><span>Flat or better</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p class="section-opinion">My hunch is the cold-food guardrail breaks first in Chennai, because average delivery time is already 53 minutes nationally, and southern-city traffic pushes prep-plus-transit past the 45-minute quality threshold faster than tier-1 metros — which is exactly why the kill criterion is a city-level pause, not a global one.</p>
+
+  <div class="insight reveal">
+    <div class="lbl">PM Insight</div>
+    <blockquote>Attach rate is easy to juice and easy to regret. The guardrails (not the North Star) are what keep this feature from <em>quietly cannibalising the trust it needs to grow.</em></blockquote>
+  </div>
+</section>
+
+<!-- ======================= EXPERIMENT ======================= -->
+<section class="block" id="experiment">
+  <div class="sec-head wide reveal">
+    <span class="sec-num">08 — Experiment Design</span>
+    <h2>How we'd prove it</h2>
+    <p class="lead">A geo-randomised A/B test in a handful of high-density cities, with pre-registered success and kill criteria.</p>
+  </div>
+
+  <div class="prose reveal">
+    <h4>Hypothesis</h4>
+    <p>Surfacing a cold-safe second-store nudge post-checkout to members on ETA &gt;25 min orders will produce ≥5% attach on eligible orders, with average second-cart value ≥₹158, primary-order ETA delta ≤+6 min, and cold-food complaint delta ≤+1.5pp.</p>
+  </div>
+
+  <p class="section-opinion">I'll be honest: the 4-week floor on run time makes me nervous, because the experiment needs 30–40k eligible orders per arm to detect a 2pp attach difference at 80% power, and a window that clips a long-weekend could skew the ETA distribution enough to invalidate the guardrail comparison.</p>
+
+  <div class="exp-grid">
+    <div class="exp-card control reveal">
+      <div class="arm">Control · 50%</div>
+      <h4>No nudge</h4>
+      <p>Standard confirmation screen. Establishes the baseline for AOV, ETA distribution, and cold-food complaint rate.</p>
+    </div>
+    <div class="exp-card treat reveal">
+      <div class="arm">Treatment · 50%</div>
+      <h4>Post-checkout second-store nudge</h4>
+      <p>Eligible orders see Pattern&nbsp;A. Randomised at the <b>user</b> level within eligible cities to avoid contamination. Sample sized to detect a 2pp attach difference at 80% power, α&nbsp;=&nbsp;0.05, roughly 30–40k eligible orders per arm over a <b>4–6 week</b> run to absorb weekday/weekend and weather variance.</p>
+    </div>
+  </div>
+
+  <div class="crit-grid">
+    <div class="crit success reveal">
+      <h4>Success criteria: ship &amp; expand if</h4>
+      <ul>
+        <li>Attach rate on eligible orders ≥ <b>5%</b></li>
+        <li>Average second-cart value ≥ <b>₹158</b> (break-even cleared)</li>
+        <li>Incremental contribution margin <b>positive</b> per bundled order</li>
+        <li>Primary-order ETA delta ≤ <b>+6 min</b> at P75</li>
+        <li>Cold-food complaint delta &lt; <b>+1.5pp</b> vs control</li>
+      </ul>
+    </div>
+    <div class="crit kill reveal">
+      <h4>Kill criteria: abort if</h4>
+      <ul>
+        <li>Cold-food complaint delta &gt; <b>+3pp</b> in any city (immediate pause)</li>
+        <li>Primary-order ETA delta &gt; <b>+10 min</b> at P75</li>
+        <li>Rider satisfaction drops &gt; <b>5pp</b> or a stop-work escalation occurs</li>
+        <li>Attach rate &lt; <b>2%</b> after 4 weeks (no product-market signal)</li>
+        <li>Net contribution margin negative after refund adjustment</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= ECONOMICS ======================= -->
+<section class="block" id="economics">
+  <div class="sec-head wide reveal">
+    <span class="sec-num">09 — Unit Economics</span>
+    <h2>The break-even model</h2>
+    <p class="lead">Multi-outlet only earns a place on the roadmap if it clears its own added cost. Here is exactly where that line sits.</p>
+  </div>
+
+  <div class="tbl-wrap reveal">
+    <table class="data">
+      <caption>Per-order economics: single-outlet vs multi-outlet (₹)</caption>
+      <thead><tr><th>Metric</th><th class="num">Single-outlet</th><th class="num">Multi-outlet (2 pickups)</th></tr></thead>
+      <tbody>
+        <tr><td>Average order value</td><td class="num">350</td><td class="num">550–650</td></tr>
+        <tr><td>Platform revenue (~28.5% net take)</td><td class="num">~100</td><td class="num">~157–185</td></tr>
+        <tr><td>Rider cost</td><td class="num">35–50</td><td class="num">50–75</td></tr>
+        <tr><td>Extra rider idle time (₹2/min × ~8–10 min)</td><td class="num">0</td><td class="num hl">15–20</td></tr>
+        <tr><td>Extra packaging (restaurant 2)</td><td class="num">0</td><td class="num hl">12–25</td></tr>
+        <tr class="total"><td>Net contribution margin</td><td class="num">~35</td><td class="num pos">~50–70</td></tr>
+        <tr><td>Incremental margin gain</td><td class="num">—</td><td class="num pos">+15–35</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="prose reveal" style="font-size:.9rem;color:var(--gray);text-align:center;">Sources: <a class="cite" href="https://img.etimg.com/photo/120812923.cms" target="_blank" rel="noopener">ICICI Securities Q4 FY25</a>, <a class="cite" href="https://www.menuhelper.in/blog/swiggy-commission-2026-breakdown-india" target="_blank" rel="noopener">MenuHelper commission breakdown 2026</a>, <a class="cite" href="https://english.mathrubhumi.com/lifestyle/food/swiggy-zomato-may-face-new-heat-as-ride-sharing-apps-join-the-feast-eocinu06" target="_blank" rel="noopener">HSBC via Mathrubhumi</a>.</p>
+
+  <div class="chart-card reveal">
+    <div class="ct">Where the incremental margin comes from</div>
+    <div class="cs">Break-even waterfall on a bundled order: incremental revenue vs incremental cost (₹ per order)</div>
+    <div class="chart-holder"><canvas id="waterfallChart"></canvas></div>
+  </div>
+
+  <div class="formula reveal">
+    <div class="frow"><span class="lab">Incremental revenue = (₹550 − ₹350) × 28.5% take</span><span class="val">+₹57</span></div>
+    <div class="frow"><span class="lab">Rider wait cost (₹2/min × ~8–10 min)</span><span class="val">−₹15 to −₹20</span></div>
+    <div class="frow"><span class="lab">Extra packaging (second restaurant)</span><span class="val">−₹12 to −₹25</span></div>
+    <div class="frow"><span class="lab">Quality / refund risk buffer</span><span class="val">−₹7</span></div>
+    <div class="frow"><span class="lab">Tech &amp; ops overhead</span><span class="val">−₹3 to −₹5</span></div>
+    <div class="eq">─────────  break-even AOV uplift = incremental cost ÷ take rate  ─────────</div>
+    <div class="frow big"><span class="lab">Minimum second-cart value to break even</span><span class="val">≈ ₹158</span></div>
+  </div>
+
+  <div class="callout reveal">
+    <div class="lbl">What the ₹158 line means</div>
+    <p>A ₹50 chai add-on <strong>loses money</strong> once you price in rider wait and packaging. A ₹175 dessert-and-drink bundle clears it comfortably. This is why the feature must steer customers toward <strong>meaningful second carts</strong> (≥₹150–₹200), not token add-ons. And why the second store should be ambient/cold-safe to keep the refund buffer small. Figures per the <a class="cite" href="https://cfomatrix.in/insight/unit-economics/food-tech-unit-economics-15-metrics" target="_blank" rel="noopener">CFOmatrix food-tech unit-economics guide</a> and the break-even framework in the research.</p>
+  </div>
+
+  <div class="scale-hero reveal">
+    <div class="eqn">6% attach × ~3M eligible orders/day × +₹175 × 28.5% take</div>
+    <div class="num">₹3.3B</div>
+    <div class="cap">Estimated incremental platform revenue per year (~$38M) at maturity, plus ~99,000 new-customer touches a day (on the DoubleDash finding that 55% of second-store orders come from first-time customers) (<a class="cite" href="https://merchants.doordash.com/en-us/doubledash" target="_blank" rel="noopener">DoorDash</a>).</div>
+  </div>
+
+  <div class="insight reveal">
+    <div class="lbl">PM Insight</div>
+    <blockquote>The prize isn't the ₹57 of incremental revenue per order. It's the <em>new-customer discovery</em>: a ₹0-CAC acquisition channel hiding inside a checkout screen.</blockquote>
+  </div>
+</section>
+
+<!-- ======================= ROLLOUT ======================= -->
+<section class="block" id="rollout">
+  <div class="sec-head wide reveal">
+    <span class="sec-num">10 — Phased Rollout &amp; GTM</span>
+    <h2>Ship the easy version first</h2>
+    <p class="lead">Three phases over 18 months, each de-risking the next. The order is the strategy.</p>
+  </div>
+
+  <p class="section-opinion">Phase 2 (Instamart bundling) would be operationally simpler — Instamart already has synchronised pickup infra. Phase 1 wins because customer-perceived value is higher, and "ambient store near the customer" is the constraint the DoubleDash data actually validates.</p>
+
+  <div class="gantt reveal">
+    <div class="gantt-scale">
+      <span class="lab"></span>
+      <span class="m">M1</span><span class="m">2</span><span class="m">3</span><span class="m">4</span><span class="m">5</span><span class="m">6</span><span class="m">7</span><span class="m">8</span><span class="m">9</span><span class="m">10</span><span class="m">11</span><span class="m">12</span><span class="m">13</span><span class="m">14</span><span class="m">15</span><span class="m">16</span><span class="m">17</span><span class="m">18</span>
+    </div>
+    <div class="gantt-row">
+      <div class="ph"><div class="pn">PHASE 1</div><div class="pt">Restaurant + Dessert/Beverage</div><div class="pd">Member-exclusive · post-checkout nudge</div></div>
+      <div class="gantt-track"><div class="gantt-bar p1" style="left:0;width:33.3%;">3–6 mo · MVP, ambient second store</div></div>
+    </div>
+    <div class="gantt-row">
+      <div class="ph"><div class="pn">PHASE 2</div><div class="pt">Restaurant + Instamart / Blinkit</div><div class="pd">Leverages existing dark-store infra</div></div>
+      <div class="gantt-track"><div class="gantt-bar p2" style="left:33.3%;width:33.3%;">6–12 mo · dark-store integration</div></div>
+    </div>
+    <div class="gantt-row">
+      <div class="ph"><div class="pn">PHASE 3</div><div class="pt">True multi-restaurant (main + main)</div><div class="pd">Cloud-kitchen clusters + prep-sync ML</div></div>
+      <div class="gantt-track"><div class="gantt-bar p3" style="left:66.6%;width:33.4%;">12–18 mo · highest AOV, highest risk</div></div>
+    </div>
+  </div>
+
+  <div class="prose reveal">
+    <p><strong>Phase 1 (3–6 mo):</strong> post-checkout nudge to ambient stores (Baskin Robbins, Naturals, Chaayos, Starbucks) within 800&nbsp;m of the drop, +5–8&nbsp;min ETA, Gold/One members only. Lowest risk, fastest to learn.</p>
+    <p><strong>Phase 2 (6–12 mo):</strong> restaurant food plus an Instamart/Blinkit item — the DoorDash restaurant-plus-7-Eleven model, with dark stores as the controlled ambient second stop (<a class="cite" href="https://digitalinasia.com/india-quick-commerce-blinkit-zepto-instamart/" target="_blank" rel="noopener">Digital in Asia</a>).</p>
+    <p><strong>Phase 3 (12–18 mo):</strong> true main-plus-main from cloud-kitchen clusters, using a prep-time-sync ML model to fire two orders at staggered times. Cloud-kitchen clusters mean one pickup point, no extra routing (<a class="cite" href="https://wazir.in/wp-content/uploads/2024/10/Wazir-Advisors_Cloud-Kitchen-Thought-Paper_March-2023.pdf" target="_blank" rel="noopener">Wazir Advisors</a>).</p>
+
+    <h4>City selection criteria</h4>
+    <ul>
+      <li><strong>Start dense:</strong> Bengaluru (HSR Layout, Koramangala), Mumbai (Powai), Delhi: neighbourhoods with high restaurant density per km² and sub-1&nbsp;km separation between outlets.</li>
+      <li><strong>Member concentration:</strong> pilot where Gold/One penetration is highest, a forgiving, high-frequency cohort.</li>
+      <li><strong>Cloud-kitchen presence:</strong> prioritise clusters for Phase 3 to eliminate second-pickup routing entirely.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ======================= RISKS ======================= -->
+<section class="block" id="risks">
+  <div class="sec-head wide reveal">
+    <span class="sec-num">11 — Risks &amp; Mitigations</span>
+    <h2>What could break the system</h2>
+    <p class="lead">Every risk here maps to a specific design or ops decision already baked into the plan.</p>
+  </div>
+
+  <p class="section-opinion">Regulatory risk is underweighted: any feature adding rider idle time without a visible bonus gives the "manufactured idle time" narrative exactly the headline it needs.</p>
+
+  <div class="risk-grid">
+    <div class="risk reveal"><span class="sev high">High</span><div class="r">Cold-food quality on the primary order</div><p class="m"><b>Mitigation:</b> ambient/cold-safe second store only (dessert, drinks, snacks); trigger nudge only when ETA &gt;25 min; hard cold-food complaint kill-switch per city.</p></div>
+    <div class="risk reveal"><span class="sev high">High</span><div class="r">Rider idle-time cost erodes margin</div><p class="m"><b>Mitigation:</b> ML-based prep-time synchronisation to fire the second pickup at the right moment; keep the second stop near the drop, not across town.</p></div>
+    <div class="risk reveal"><span class="sev high">High</span><div class="r">ETA-accuracy degradation &amp; bump events</div><p class="m"><b>Mitigation:</b> show the longer combined ETA explicitly <b>before</b> confirmation; model the second WT stage separately; never surprise the customer.</p></div>
+    <div class="risk reveal"><span class="sev med">Medium</span><div class="r">Restaurant-partner cannibalisation</div><p class="m"><b>Mitigation:</b> curated non-competing pairings only (exclude same-cuisine outlets); position as incremental discovery, not substitution, with partner-NPS as a guardrail.</p></div>
+    <div class="risk reveal"><span class="sev med">Medium</span><div class="r">Regulatory / rider-union pushback</div><p class="m"><b>Mitigation:</b> explicit multi-stop bonus so bundled orders pay riders <b>more</b>; align with the <a class="cite" href="https://www.pib.gov.in/PressReleasePage.aspx?PRID=2200767&reg=3&lang=1" target="_blank" rel="noopener">Code on Social Security 2020</a> framing rather than fighting it.</p></div>
+    <div class="risk reveal"><span class="sev med">Medium</span><div class="r">Repeating the Intercity Legends failure</div><p class="m"><b>Mitigation:</b> ship the easiest version first (ambient, post-checkout, no minimum order); measure attach &amp; complaint delta obsessively before expanding scope.</p></div>
+    <div class="risk reveal"><span class="sev med">Medium</span><div class="r">Q-commerce steals product &amp; rider resources</div><p class="m"><b>Mitigation:</b> route Phase 2 <b>through</b> Instamart/Blinkit so the feature rides the q-commerce investment instead of competing with it for fleet.</p></div>
+    <div class="risk reveal"><span class="sev med">Medium</span><div class="r">Adoption killed by any hint of extra cost</div><p class="m"><b>Mitigation:</b> strict no-extra-delivery-fee rule; member-gate the launch so the value exchange (subscription = free bundling) is explicit.</p></div>
+  </div>
+</section>
+
+<!-- ======================= OPEN QUESTIONS ======================= -->
+<section class="block" id="open">
+  <div class="sec-head reveal">
+    <span class="sec-num">12 — Open Questions</span>
+    <h2>What we honestly don't know yet</h2>
+    <p class="lead">A senior spec names its unknowns and assigns them owners. These are blocking to varying degrees.</p>
+  </div>
+
+  <div class="oq-list">
+    <div class="oq reveal"><span class="tag data">Data</span><p>What is the <b>true</b> incremental rider-wait distribution for a near-drop second pickup in Indian metros. Is DoubleDash's 5–6 min transferable, or does traffic push it to 12+?</p></div>
+    <div class="oq reveal"><span class="tag ops">Ops</span><p>Can prep-time-sync ML fire the second order accurately enough at Phase 3 to keep both orders ready within a 3-minute window, or must we restrict to cloud-kitchen clusters indefinitely?</p></div>
+    <div class="oq reveal"><span class="tag product">Product</span><p>Does the post-checkout nudge (Pattern A) or the in-cart upsell (Pattern B) win on net contribution margin once friction and cannibalisation are netted out?</p></div>
+    <div class="oq reveal"><span class="tag design">Design</span><p>How explicit must the longer-ETA disclosure be to prevent trust erosion without suppressing attach. Is a number enough, or do we need a visual "why it's slower" explainer?</p></div>
+    <div class="oq reveal"><span class="tag legal">Legal</span><p>Under the evolving Labour Codes, does a multi-stop bonus fully insulate the feature from a "manufactured idle time" claim, or is a per-minute wait guarantee required?</p></div>
+    <div class="oq reveal"><span class="tag product">Product</span><p>Should bundling stay member-exclusive at maturity as a retention lever, or graduate to all users once quality guardrails are proven stable?</p></div>
+    <div class="oq reveal"><span class="tag data">Data</span><p>What share of the ₹3.3B/year opportunity is genuinely incremental versus cannibalised from second orders the customer would have placed anyway?</p></div>
+  </div>
+</section>
+
+<!-- ======================= CLOSING ======================= -->
+<section class="block closing" id="closing">
+  <div class="sec-head reveal" style="margin-bottom:2.2rem;">
+    <span class="sec-num">13 — Reflections</span>
+    <h2>The constraint was never imagination</h2>
+  </div>
+  <div class="prose reveal">
+    <p class="big">Innovation in food delivery isn't limited by imagination. It's limited by operational variance and unit economics.</p>
+    <p>The question isn't "can we build this?" — four platforms already have. The question is whether we can build it <strong>without breaking the system it lives inside</strong>: the 8.6% margin, the 53-minute clock, the ETA promise that took years to earn.</p>
+    <p>The answer is yes, but only in a specific shape: ambient second store, near the customer, no extra fee, honest ETA, member-gated, easiest version first. Every one of those constraints is a scar from someone else's failure. The design isn't clever. It's disciplined.</p>
+  </div>
+  <div class="kicker-quote reveal">The best PM thinking doesn't ask <em>"Can we build this?"</em> It asks <em>"Can we build this without breaking the system?"</em></div>
+</section>
+
+</main>
+
+<!-- ======================= FOOTER ======================= -->
+<footer class="footer">
+  <div class="footer-grid">
+    <div>
+      <h4>About the author</h4>
+      <div class="author-name">Vishal V</div>
+      <p>Aspiring Product Manager. This case study is a self-directed portfolio artifact exploring how a widely-wished-for feature meets the hard reality of operations and unit economics.</p>
+    </div>
+    <div>
+      <h4>Contact</h4>
+      <ul>
+        <li><a href="#" target="_blank" rel="noopener">LinkedIn →</a></li>
+        <li><a href="#" target="_blank" rel="noopener">Email →</a></li>
+        <li><a href="#top">Back to top ↑</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Methodology</h4>
+      <p>Desk research synthesising public company filings, analyst reports (ICICI Securities, HSBC, Macquarie), primary product documentation, and academic sources. Unit-economic figures are modelled estimates grounded in cited public data, not internal Swiggy/Zomato numbers.</p>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>Research compiled July 2026 · All figures sourced from public data (see inline citations).</span>
+    <span>Independent case study · Not affiliated with Swiggy or Zomato.</span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
